@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shaders0980 GLSL 3D Renderer</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05070f;
+        color: #d6e1ff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      #hud {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        background: rgba(10, 16, 30, 0.72);
+        border: 1px solid rgba(120, 150, 255, 0.35);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      code {
+        color: #9cd5ff;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+    <div id="hud">
+      Rendering shader: <code id="shader-name"></code><br />
+      Input: SpaceEngine combined GLSL 330<br />
+      Output: WebGL2 GLSL ES 300
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
