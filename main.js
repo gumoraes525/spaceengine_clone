@@ -78,6 +78,10 @@ function convertCombinedShaderToWebGL(source, vertexStage) {
       'vec3 emissColor = texture(PlanckFunction, vec2(log(temp * 0.001 + tempShift) * 0.188 + 0.1316, 0.5)).rgb * starBright;',
     );
 
+  const shader = result.join('\n')
+    .replace(/\bsampler1D\b/g, 'sampler2D')
+    .replace(/texture\(\s*PlanckFunction\s*,\s*([^\)]+)\)/g, 'texture(PlanckFunction, vec2($1, 0.5))');
+
   return [
     '#version 300 es',
     'precision highp float;',
