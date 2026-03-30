@@ -25,56 +25,58 @@ const mat4 = {
   },
 };
 
-function convertCombinedShaderToWebGL(source, vertexStage) {
+function extractShaderStage(source, vertexStage) {
   const lines = source.split(/\r?\n/);
-  const macros = {
-    _VERTEX_: vertexStage,
-    UNIFORM_VERTEXES: false,
-  };
+  const begin = lines.findIndex((line) => line.trim() === '#ifdef _VERTEX_');
+  if (begin === -1) {
+    throw new Error('Combined shader is missing #ifdef _VERTEX_ section.');
+  }
 
-  const includeStack = [true];
-  const result = [];
+  let depth = 0;
+  let elseAt = -1;
+  let end = -1;
 
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-
-    if (line.startsWith('#version')) {
+  for (let i = begin; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (/^#if(n?def)?\b/.test(line)) {
+      depth += 1;
       continue;
     }
-    if (line === '#auto_defines') {
+    if (line === '#else' && depth === 1) {
+      elseAt = i;
       continue;
     }
-
-    const ifdefMatch = line.match(/^#ifdef\s+(\w+)/);
-    if (ifdefMatch) {
-      const key = ifdefMatch[1];
-      includeStack.push(includeStack[includeStack.length - 1] && Boolean(macros[key]));
-      continue;
-    }
-
-    const ifndefMatch = line.match(/^#ifndef\s+(\w+)/);
-    if (ifndefMatch) {
-      const key = ifndefMatch[1];
-      includeStack.push(includeStack[includeStack.length - 1] && !Boolean(macros[key]));
-      continue;
-    }
-
-    if (line === '#else') {
-      const old = includeStack.pop();
-      const parent = includeStack[includeStack.length - 1];
-      includeStack.push(parent && !old);
-      continue;
-    }
-
     if (line === '#endif') {
-      includeStack.pop();
-      continue;
-    }
-
-    if (includeStack[includeStack.length - 1]) {
-      result.push(rawLine);
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
     }
   }
+
+  if (elseAt === -1 || end === -1) {
+    throw new Error('Failed to parse _VERTEX_ block boundaries.');
+  }
+
+  const section = vertexStage
+    ? lines.slice(begin + 1, elseAt)
+    : lines.slice(elseAt + 1, end);
+
+  return section.join('\n');
+}
+
+function convertCombinedShaderToWebGL(source, vertexStage) {
+  const shader = extractShaderStage(source, vertexStage)
+    .replace('uniform sampler1D   PlanckFunction;', 'uniform sampler2D   PlanckFunction;')
+    .replace(
+      'vec3 emissColor = texture(PlanckFunction, log(temp * 0.001 + tempShift) * 0.188 + 0.1316).rgb * fadeEmiss * diskBright;',
+      'vec3 emissColor = texture(PlanckFunction, vec2(log(temp * 0.001 + tempShift) * 0.188 + 0.1316, 0.5)).rgb * fadeEmiss * diskBright;',
+    )
+    .replace(
+      'vec3 emissColor = texture(PlanckFunction, log(temp * 0.001 + tempShift) * 0.188 + 0.1316).rgb * starBright;',
+      'vec3 emissColor = texture(PlanckFunction, vec2(log(temp * 0.001 + tempShift) * 0.188 + 0.1316, 0.5)).rgb * starBright;',
+    );
 
   const shader = result.join('\n')
     .replace(/\bsampler1D\b/g, 'sampler2D')
